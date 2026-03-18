@@ -63,7 +63,7 @@ rlm-code
 Launches a Textual TUI with a Tokyo Night color scheme. Type requests in the input bar, watch the LLM reason and call tools in real-time with streaming output.
 
 ```
-┌─ RLM Code ─────────────────── gpt-4o ─── ~/Projects ─┐
+┌─ RLM Code ─────────────────── gpt-5 ─── ~/Projects ─┐
 │                                                        │
 │  > fix the off-by-one in parser.py                     │
 │                                                        │
