@@ -112,21 +112,36 @@ def parse_final_answer(text: str, executor: CodeExecutor) -> str | None:
 _BLOCKED_BUILTINS = {"exit", "quit", "eval", "exec", "input", "compile", "globals", "locals"}
 
 
+def _make_llm_query(sub_llm: LLMClient) -> Callable[[str], str]:
+    """Create an ``llm_query`` callable backed by *sub_llm*."""
+
+    def llm_query(prompt: str) -> str:
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Answer concisely."},
+            {"role": "user", "content": prompt},
+        ]
+        return sub_llm.completion(messages)
+
+    return llm_query
+
+
 class CodeExecutor:
     """Persistent Python execution environment with coding tools injected."""
 
     def __init__(
         self,
         working_directory: str,
+        sub_llm: LLMClient | None = None,
     ) -> None:
         self.last_final_answer: str | None = None
         self.namespace: dict = {}
         self._lock = threading.Lock()
-        self._init_namespace(working_directory)
+        self._init_namespace(working_directory, sub_llm)
 
     def _init_namespace(
         self,
         working_directory: str,
+        sub_llm: LLMClient | None = None,
     ) -> None:
         # Safe builtins — remove dangerous ones
         safe_builtins = {k: v for k, v in __builtins__.items() if k not in _BLOCKED_BUILTINS} if isinstance(__builtins__, dict) else {k: getattr(__builtins__, k) for k in dir(__builtins__) if k not in _BLOCKED_BUILTINS}
@@ -141,6 +156,10 @@ class CodeExecutor:
         self.namespace["FINAL_VAR"] = self._final_var
         self.namespace["SHOW_VARS"] = self._show_vars
 
+        # Inject llm_query if a sub-model is available
+        if sub_llm is not None:
+            self.namespace["llm_query"] = _make_llm_query(sub_llm)
+
     def _final_var(self, var_name: str) -> str:
         """Record a variable's value as the final answer."""
         if var_name in self.namespace:
@@ -150,7 +169,7 @@ class CodeExecutor:
 
     def _show_vars(self) -> str:
         """Return a summary of user-defined variables in the namespace."""
-        skip = {"__builtins__", "FINAL_VAR", "SHOW_VARS",
+        skip = {"__builtins__", "FINAL_VAR", "SHOW_VARS", "llm_query",
                 "bash", "read_file", "write_file", "edit_file",
                 "glob_files", "grep_files"}
         items = []
@@ -230,11 +249,12 @@ class CodingEngine:
         system_prompt: str,
         working_directory: str,
         max_iterations: int = 30,
+        sub_llm: LLMClient | None = None,
     ) -> None:
         self.llm = llm
         self.system_prompt = system_prompt
         self.max_iterations = max_iterations
-        self._executor = CodeExecutor(working_directory)
+        self._executor = CodeExecutor(working_directory, sub_llm=sub_llm)
         self._message_history: list[dict] = []
 
     def _llm_call(

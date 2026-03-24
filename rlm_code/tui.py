@@ -188,6 +188,12 @@ class CodingApp(App):
             api_key=self.config.api_key,
             base_url=self.config.base_url,
         )
+        sub_llm = LLMClient(
+            backend=self.config.backend,
+            model=self.config.sub_model,
+            api_key=self.config.api_key,
+            base_url=self.config.base_url,
+        )
         tools = build_coding_tools(self.config.cwd)
         system_prompt = build_system_prompt(tools)
         self._engine = CodingEngine(
@@ -195,6 +201,7 @@ class CodingApp(App):
             system_prompt=system_prompt,
             working_directory=self.config.cwd,
             max_iterations=self.config.max_iterations,
+            sub_llm=sub_llm,
         )
 
     # -- UI helpers ----------------------------------------------------------
@@ -403,6 +410,12 @@ def run_oneshot(config: CLIConfig) -> None:
         api_key=config.api_key,
         base_url=config.base_url,
     )
+    sub_llm = LLMClient(
+        backend=config.backend,
+        model=config.sub_model,
+        api_key=config.api_key,
+        base_url=config.base_url,
+    )
     tools = build_coding_tools(config.cwd)
     system_prompt = build_system_prompt(tools)
     engine = CodingEngine(
@@ -410,6 +423,7 @@ def run_oneshot(config: CLIConfig) -> None:
         system_prompt=system_prompt,
         working_directory=config.cwd,
         max_iterations=config.max_iterations,
+        sub_llm=sub_llm,
     )
 
     result = engine.run(config.prompt)

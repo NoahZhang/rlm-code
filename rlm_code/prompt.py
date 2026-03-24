@@ -50,6 +50,13 @@ print(matches)
 6. **Be precise with edits**: The `edit_file` tool does exact string matching. Copy the exact text you want to replace, including whitespace and indentation.
 7. **No function-calling markup**: Do NOT use structured function-call syntax (e.g. `<|tool_calls_section_begin|>`). Always write tool calls as Python code inside ```repl``` blocks.
 
+## Sub-model queries
+
+llm_query(prompt) — call a lightweight sub-model to answer a question. Useful for:
+  - Summarising or analysing large text
+  - Decomposing a complex task into sub-questions
+  Example: summary = llm_query(f"Summarize this code:\\n{{code}}")
+
 ## Finishing
 
 When you have completed the user's request, provide your final response using FINAL():

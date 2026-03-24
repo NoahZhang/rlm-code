@@ -11,6 +11,7 @@ from dataclasses import dataclass
 class CLIConfig:
     backend: str
     model: str
+    sub_model: str
     api_key: str | None
     base_url: str | None
     max_iterations: int
@@ -41,6 +42,11 @@ def parse_args(argv: list[str] | None = None) -> CLIConfig:
         help="Model name (default: gpt-4o for openai, claude-sonnet-4-20250514 for anthropic, env: RLM_MODEL)",
     )
     parser.add_argument(
+        "--sub-model",
+        default=os.environ.get("RLM_SUB_MODEL"),
+        help="Sub-model for llm_query tool (default: same as --model, env: RLM_SUB_MODEL)",
+    )
+    parser.add_argument(
         "--base-url",
         default=os.environ.get("RLM_BASE_URL"),
         help="Base URL for the API (env: RLM_BASE_URL). Useful for OpenAI-compatible providers.",
@@ -66,6 +72,8 @@ def parse_args(argv: list[str] | None = None) -> CLIConfig:
     # Resolve model defaults based on backend
     if args.model is None:
         args.model = "gpt-4o" if args.backend == "openai" else "claude-sonnet-4-20250514"
+    if args.sub_model is None:
+        args.sub_model = args.model
 
     # Resolve API key: CLI arg > env var
     api_key = args.api_key
@@ -78,6 +86,7 @@ def parse_args(argv: list[str] | None = None) -> CLIConfig:
     return CLIConfig(
         backend=args.backend,
         model=args.model,
+        sub_model=args.sub_model,
         api_key=api_key,
         base_url=args.base_url,
         max_iterations=args.max_iterations,

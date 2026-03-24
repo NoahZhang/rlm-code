@@ -4,7 +4,7 @@ An implementation of **Recursive Language Models (RLM)** — an interactive codi
 
 ## How it works
 
-RLM Code provides 6 filesystem tools (`bash`, `read_file`, `write_file`, `edit_file`, `glob_files`, `grep_files`) in a persistent Python execution environment. The LLM doesn't call tools via a structured function-call API — instead it writes Python code that invokes the tool functions directly, reads `print()` output, and decides what to do next. This loop continues until the LLM emits `FINAL(...)` with a summary.
+RLM Code provides 6 filesystem tools (`bash`, `read_file`, `write_file`, `edit_file`, `glob_files`, `grep_files`) and a recursive `llm_query()` sub-call in a persistent Python execution environment. The LLM doesn't call tools via a structured function-call API — instead it writes Python code that invokes the tool functions directly, reads `print()` output, and decides what to do next. This loop continues until the LLM emits `FINAL(...)` with a summary.
 
 ```
 User prompt
@@ -35,6 +35,7 @@ Final answer returned to user
 | Persistent namespace across iterations | Variables survive across rounds, enabling incremental computation |
 | Stage hints not persisted in history | Guide LLM behavior without polluting context |
 | Streaming preview + final Markdown rendering | Stream with plain text (fast), final render with Markdown (polished) |
+| Recursive sub-model queries via `llm_query()` | Delegate lightweight tasks (summarisation, analysis), keep main context clean |
 | Tool-call markup fallback parsing | Gracefully handles fine-tuned models that emit raw function-call tokens |
 
 ## Installation
@@ -116,6 +117,7 @@ options:
   --backend {openai,anthropic}
                           LLM backend (default: openai, env: RLM_BACKEND)
   --model MODEL           Model name (default: gpt-5 / claude-sonnet-4-6, env: RLM_MODEL)
+  --sub-model MODEL       Sub-model for llm_query() (default: same as --model, env: RLM_SUB_MODEL)
   --base-url URL          API base URL (env: RLM_BASE_URL). For OpenAI-compatible providers.
   --api-key API_KEY       API key (default: from env vars)
   --max-iterations N      Max iterations per request (default: 30)
@@ -148,7 +150,7 @@ rlm-code --model gpt-4o-mini "what does this project do?"
 
 ## Tools
 
-The LLM has access to 6 filesystem tools (in `rlm_code/tools.py`):
+The LLM has access to 6 filesystem tools (in `rlm_code/tools.py`) plus a recursive sub-call:
 
 | Tool | Signature | Description |
 |------|-----------|-------------|
@@ -158,6 +160,7 @@ The LLM has access to 6 filesystem tools (in `rlm_code/tools.py`):
 | `edit_file` | `(path, old_text, new_text)` | Replace first exact occurrence of `old_text` with `new_text`. |
 | `glob_files` | `(pattern, path=None)` | Find files matching a glob pattern. Skips `.git`, `node_modules`, `__pycache__`, etc. Max 200 results. |
 | `grep_files` | `(pattern, path=None, glob=None, context=0)` | Search file contents with regex (`grep -rnE`). Max 500 results. 30s timeout. |
+| `llm_query` | `(prompt)` | Call a sub-model to answer a question. Useful for summarisation, analysis, or decomposing complex tasks. Defaults to the same model as `--model` unless `--sub-model` is set. |
 
 All paths are resolved relative to the working directory (`--cwd`). The tools run in the user's filesystem — **there is no sandbox**. The LLM can read, write, and execute anything you can.
 

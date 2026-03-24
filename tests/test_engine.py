@@ -264,6 +264,26 @@ class MockStreamingLLM(MockLLM):
         return full
 
 
+class TestLLMQuery:
+    def test_llm_query_injected(self, tmp_path):
+        """When sub_llm is provided, llm_query should be available in namespace."""
+        sub = MockLLM(["sub-model says hello"])
+        executor = CodeExecutor(str(tmp_path), sub_llm=sub)
+        assert "llm_query" in executor.namespace
+        result = executor.execute("answer = llm_query('hi')\nprint(answer)")
+        assert "sub-model says hello" in result.stdout
+
+    def test_no_llm_query_without_sub_llm(self, tmp_path):
+        executor = CodeExecutor(str(tmp_path))
+        assert "llm_query" not in executor.namespace
+
+    def test_llm_query_hidden_from_show_vars(self, tmp_path):
+        sub = MockLLM(["ok"])
+        executor = CodeExecutor(str(tmp_path), sub_llm=sub)
+        result = executor.execute("print(SHOW_VARS())")
+        assert "llm_query" not in result.stdout
+
+
 class TestCodingEngine:
     def test_immediate_final(self, tmp_path):
         llm = MockLLM(["I know the answer.\nFINAL(42)"])
